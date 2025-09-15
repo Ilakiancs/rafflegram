@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orientation Event Picker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Orientation Event Picker</h1>
+            <p>Select winner from recent followers only</p>
+            <a href="{{ url_for('index') }}" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <div class="picker-form">
+                <form id="orientationForm">
+                    <div class="form-group">
+                        <label for="username">Instagram Username</label>
+                        <input type="text" id="username" name="username" placeholder="ieeeras_iit" required>
+                        <small>Enter username without @ symbol</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timeWindow">Time Window</label>
+                        <select id="timeWindow" name="timeWindow" required>
+                            <option value="0.5">Last 30 minutes</option>
+                            <option value="1.0" selected>Last 1 hour</option>
+                            <option value="2.0">Last 2 hours</option>
+                        </select>
+                        <small>Only followers from this time period are eligible</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Pick Winner from Recent Followers</button>
+                </form>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing recent followers and selecting winner...</p>
+            </div>
+
+            <div id="result" class="result hidden">
+                <div class="winner-card orientation">
+                    <h2>Orientation Winner!</h2>
+                    <div class="winner-info">
+                        <div class="winner-avatar">
+                            <img id="winnerAvatar" src="" alt="Winner Avatar" style="display: none;">
+                            <div id="avatarPlaceholder" class="avatar-placeholder">
+                                <span id="winnerInitials"></span>
+                            </div>
+                        </div>
+                        <div class="winner-details">
+                            <h3 id="winnerUsername"></h3>
+                            <p id="winnerFullName"></p>
+                            <div class="winner-badges">
+                                <span id="privateBadge" class="badge private hidden">Private</span>
+                                <span id="verifiedBadge" class="badge verified hidden">Verified</span>
+                                <span class="badge orientation">Orientation Attendee</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pick-stats">
+                        <p>Selected from <span id="recentFollowers"></span> recent followers</p>
+                        <p>Time window: <span id="timeWindowUsed"></span></p>
+                        <p>Picked at <span id="pickTime"></span></p>
+                    </div>
+                    <button id="pickAgain" class="btn btn-secondary">Pick Another Winner</button>
+                </div>
+            </div>
+
+            <div id="error" class="error hidden">
+                <div class="error-card">
+                    <h3>No Recent Followers Found</h3>
+                    <p id="errorMessage"></p>
+                    <div class="error-suggestions">
+                        <h4>Suggestions:</h4>
+                        <ul>
+                            <li>Try a longer time window</li>
+                            <li>Make sure the orientation is actively happening</li>
+                            <li>Announce the giveaway during the event</li>
+                            <li>Encourage attendees to follow during the session</li>
+                        </ul>
+                    </div>
+                    <button id="tryAgain" class="btn btn-primary">Try Again</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('orientationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const timeWindow = parseFloat(document.getElementById('timeWindow').value);
+            
+            if (!username) {
+                showError('Please enter a username');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/orientation-pick', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, time_window: timeWindow })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(data);
+                } else {
+                    showError(data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                showError('Network error. Please check your connection.');
+            }
+        });
+        
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+        
+        function showResult(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            
+            const winner = data.winner;
+            document.getElementById('winnerUsername').textContent = '@' + winner.username;
+            document.getElementById('winnerFullName').textContent = winner.full_name || 'No name provided';
+            document.getElementById('recentFollowers').textContent = data.recent_followers_count;
+            document.getElementById('timeWindowUsed').textContent = getTimeWindowLabel(data.time_window);
+            document.getElementById('pickTime').textContent = new Date(data.timestamp).toLocaleString();
+            
+            // Set initials
+            const initials = winner.full_name ? winner.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : winner.username[0].toUpperCase();
+            document.getElementById('winnerInitials').textContent = initials;
+            
+            // Handle avatar
+            if (winner.profile_pic_url) {
+                document.getElementById('winnerAvatar').src = winner.profile_pic_url;
+                document.getElementById('winnerAvatar').style.display = 'block';
+                document.getElementById('avatarPlaceholder').style.display = 'none';
+            }
+            
+            // Show badges
+            if (winner.is_private) {
+                document.getElementById('privateBadge').classList.remove('hidden');
+            }
+            if (winner.is_verified) {
+                document.getElementById('verifiedBadge').classList.remove('hidden');
+            }
+            
+            document.getElementById('result').classList.remove('hidden');
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+        
+        function getTimeWindowLabel(hours) {
+            if (hours === 0.5) return 'Last 30 minutes';
+            if (hours === 1.0) return 'Last 1 hour';
+            if (hours === 2.0) return 'Last 2 hours';
+            return `Last ${hours} hour(s)`;
+        }
+        
+        document.getElementById('pickAgain').addEventListener('click', () => {
+            document.getElementById('orientationForm').dispatchEvent(new Event('submit'));
+        });
+        
+        document.getElementById('tryAgain').addEventListener('click', () => {
+            document.getElementById('error').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

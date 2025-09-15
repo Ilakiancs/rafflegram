@@ -32,17 +32,26 @@ A Python script for selecting random winners from Instagram followers using the 
 
 ## Usage
 
-### For Orientation Events (Time-based Selection)
+### Web Interface
+```bash
+cd ui
+python app.py
+```
+Open http://localhost:5000 in your browser
+
+### Command Line
+
+#### For Orientation Events (Time-based Selection)
 ```bash
 python live_orientation_picker.py
 ```
 
-### For General Giveaways (All Followers)
+#### For General Giveaways (All Followers)
 ```bash
 python instagram_social_follower_picker.py
 ```
 
-### Menu Interface
+#### Menu Interface
 ```bash
 python instagram_winner_picker.py
 ```

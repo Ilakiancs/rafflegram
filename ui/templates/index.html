@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Follower Picker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Instagram Follower Picker</h1>
+            <p>Select random winners from Instagram followers</p>
+        </header>
+
+        <main>
+            <div class="picker-options">
+                <div class="option-card">
+                    <h2>General Giveaway</h2>
+                    <p>Pick winner from all followers</p>
+                    <a href="{{ url_for('general_picker') }}" class="btn btn-primary">Start General Pick</a>
+                </div>
+
+                <div class="option-card">
+                    <h2>Orientation Event</h2>
+                    <p>Pick winner from recent followers only</p>
+                    <a href="{{ url_for('orientation_picker') }}" class="btn btn-secondary">Start Orientation Pick</a>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Instagram Follower Picker - Professional Giveaway Tool</p>
+        </footer>
+    </div>
+</body>
+</html>

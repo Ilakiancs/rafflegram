@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Follower Picker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>General Follower Picker</h1>
+            <p>Select winner from all followers</p>
+            <a href="{{ url_for('index') }}" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <div class="picker-form">
+                <form id="generalForm">
+                    <div class="form-group">
+                        <label for="username">Instagram Username</label>
+                        <input type="text" id="username" name="username" placeholder="ieeeras_iit" required>
+                        <small>Enter username without @ symbol</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="count">Number of Followers to Fetch</label>
+                        <input type="number" id="count" name="count" value="50" min="10" max="500">
+                        <small>Recommended: 50-100 for good randomness</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Pick Winner</button>
+                </form>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Fetching followers and selecting winner...</p>
+            </div>
+
+            <div id="result" class="result hidden">
+                <div class="winner-card">
+                    <h2>Winner Selected!</h2>
+                    <div class="winner-info">
+                        <div class="winner-avatar">
+                            <img id="winnerAvatar" src="" alt="Winner Avatar" style="display: none;">
+                            <div id="avatarPlaceholder" class="avatar-placeholder">
+                                <span id="winnerInitials"></span>
+                            </div>
+                        </div>
+                        <div class="winner-details">
+                            <h3 id="winnerUsername"></h3>
+                            <p id="winnerFullName"></p>
+                            <div class="winner-badges">
+                                <span id="privateBadge" class="badge private hidden">Private</span>
+                                <span id="verifiedBadge" class="badge verified hidden">Verified</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pick-stats">
+                        <p>Selected from <span id="totalFollowers"></span> followers</p>
+                        <p>Picked at <span id="pickTime"></span></p>
+                    </div>
+                    <button id="pickAgain" class="btn btn-secondary">Pick Another Winner</button>
+                </div>
+            </div>
+
+            <div id="error" class="error hidden">
+                <div class="error-card">
+                    <h3>Error</h3>
+                    <p id="errorMessage"></p>
+                    <button id="tryAgain" class="btn btn-primary">Try Again</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('generalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const count = parseInt(document.getElementById('count').value);
+            
+            if (!username) {
+                showError('Please enter a username');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/general-pick', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, count })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(data);
+                } else {
+                    showError(data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                showError('Network error. Please check your connection.');
+            }
+        });
+        
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+        
+        function showResult(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            
+            const winner = data.winner;
+            document.getElementById('winnerUsername').textContent = '@' + winner.username;
+            document.getElementById('winnerFullName').textContent = winner.full_name || 'No name provided';
+            document.getElementById('totalFollowers').textContent = data.total_followers;
+            document.getElementById('pickTime').textContent = new Date(data.timestamp).toLocaleString();
+            
+            // Set initials
+            const initials = winner.full_name ? winner.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : winner.username[0].toUpperCase();
+            document.getElementById('winnerInitials').textContent = initials;
+            
+            // Handle avatar
+            if (winner.profile_pic_url) {
+                document.getElementById('winnerAvatar').src = winner.profile_pic_url;
+                document.getElementById('winnerAvatar').style.display = 'block';
+                document.getElementById('avatarPlaceholder').style.display = 'none';
+            }
+            
+            // Show badges
+            if (winner.is_private) {
+                document.getElementById('privateBadge').classList.remove('hidden');
+            }
+            if (winner.is_verified) {
+                document.getElementById('verifiedBadge').classList.remove('hidden');
+            }
+            
+            document.getElementById('result').classList.remove('hidden');
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+        
+        document.getElementById('pickAgain').addEventListener('click', () => {
+            document.getElementById('generalForm').dispatchEvent(new Event('submit'));
+        });
+        
+        document.getElementById('tryAgain').addEventListener('click', () => {
+            document.getElementById('error').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
